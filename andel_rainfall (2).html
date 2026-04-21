@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>ANDeL Rainfall Nowcast</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:   #0f1f3d;
+      --blue:   #1a6cff;
+      --teal:   #00c2b2;
+      --slate:  #4a6080;
+      --mist:   #e8edf5;
+      --white:  #ffffff;
+      --glass:  rgba(255,255,255,0.94);
+      --shadow: 0 4px 24px rgba(15,31,61,0.13);
+      --radius: 14px;
+      --mono:   'DM Mono', monospace;
+      --sans:   'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--navy);
+      overflow: hidden;
+    }
+
+    /* ── Navbar ── */
+    #navbar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 1100;
+      height: 54px;
+      background: var(--mist);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; padding: 0 20px; gap: 12px;
+    }
+    .nav-badge { display: flex; align-items: center; gap: 8px; }
+    .nav-logo {
+      width: 30px; height: 30px;
+      background: var(--slate);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo svg { width: 16px; height: 16px; }
+    .nav-title {
+      font-size: 18px; font-weight: 800;
+      color: var(--navy); letter-spacing: -0.5px;
+    }
+    .nav-tag {
+      font-family: var(--mono);
+      font-size: 10px; font-weight: 500;
+      color: var(--teal);
+      background: rgba(0,194,178,0.12);
+      border: 1px solid rgba(0,194,178,0.25);
+      padding: 2px 8px; border-radius: 100px;
+      letter-spacing: 0.5px;
+    }
+    .nav-spacer { flex: 1; }
+    .nav-logo-img {
+      height: 90px; width: auto; object-fit: contain;
+      opacity: 0.7;
+    }
+    .nav-credit {
+      font-family: var(--mono);
+      font-size: 15px; color: var(--navy);
+    }
+
+    /* ── Map ── */
+    #map {
+      position: absolute; top: 54px; left: 0; right: 0; bottom: 0;
+      cursor: crosshair !important;
+    }
+    .leaflet-container { cursor: crosshair !important; background: #0d1b2e; }
+    .leaflet-dragging .leaflet-container { cursor: grabbing !important; }
+    .leaflet-top.leaflet-left { display: none; }
+    .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+      margin-bottom: 168px; margin-right: 14px;
+    }
+    .leaflet-control-zoom a {
+      background: var(--glass) !important;
+      color: var(--navy) !important;
+      border: none !important;
+      box-shadow: var(--shadow) !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+    }
+
+    /* ── Controls panel ── */
+    #controls {
+      position: absolute; top: 66px; right: 14px; z-index: 1000;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      padding: 16px; border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column; gap: 12px;
+      min-width: 220px;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+    .ctrl-heading {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate);
+    }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      color: var(--slate);
+    }
+    .field input[type="date"],
+    .field input[type="text"] {
+      padding: 7px 10px;
+      border: 1px solid var(--mist);
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 12px; color: var(--navy);
+      background: #f5f8ff; outline: none;
+    }
+    .field input:focus { border-color: var(--blue); background: var(--white); }
+
+    .op-row { display: flex; align-items: center; gap: 8px; }
+    .op-row label {
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 500; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--slate); flex-shrink: 0;
+    }
+    .op-row input[type="range"] { flex: 1; accent-color: var(--blue); cursor: pointer; }
+    .op-row span {
+      font-family: var(--mono);
+      font-size: 11px; font-weight: 500; color: var(--blue);
+      min-width: 34px; text-align: right;
+    }
+
+    #clearBtn {
+      padding: 8px 10px;
+      background: transparent;
+      border: 1px solid var(--mist);
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 12px; font-weight: 600; color: var(--slate);
+      cursor: pointer; transition: all 0.15s;
+    }
+    #clearBtn:hover { background: var(--mist); color: var(--navy); }
+    #status {
+      font-family: var(--mono);
+      font-size: 10px; color: var(--slate);
+      min-height: 13px; text-align: center;
+    }
+
+    /* ── Colorbar ── */
+    #colorbar {
+      position: absolute; bottom: 168px; left: 14px; z-index: 1000;
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      padding: 12px 14px; border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.6);
+      display: none;
+    }
+    #colorbar strong {
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      color: var(--slate); display: block; margin-bottom: 8px;
+    }
+    .cb-row {
+      display: flex; align-items: center; gap: 8px;
+      border-radius: 5px;
+      padding: 1px 4px; margin: 0 -4px 3px;
+      transition: background 0.15s;
+    }
+    .cb-row.cb-active { background: rgba(26,108,255,0.1); }
+    .cb-swatch { width: 20px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .cb-label { font-family: var(--mono); font-size: 10px; color: var(--navy); }
+
+    /* ── Timeline ── */
+    #timeline {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(15,31,61,0.08);
+      box-shadow: 0 -4px 30px rgba(15,31,61,0.10);
+      padding: 12px 20px 16px;
+      user-select: none;
+    }
+    .tl-header {
+      display: flex; align-items: flex-end;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .tl-left { display: flex; flex-direction: column; gap: 1px; }
+    .tl-eyebrow {
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--slate);
+    }
+    .tl-clock {
+      font-family: var(--mono);
+      font-size: 26px; font-weight: 500;
+      color: var(--navy); letter-spacing: -1px; line-height: 1;
+    }
+    .tl-clock span { font-size: 13px; font-weight: 400; color: var(--slate); margin-left: 3px; }
+
+    .tl-pill {
+      font-family: var(--mono);
+      font-size: 10px; font-weight: 500;
+      padding: 4px 12px; border-radius: 100px;
+      border: 1px solid transparent; transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .tl-pill.idle    { background: var(--mist); border-color: #d0d8e8; color: var(--slate); }
+    .tl-pill.loading { background: #eff4ff; border-color: #b3ccff; color: var(--blue); }
+    .tl-pill.ok      { background: #edfdf5; border-color: #b3f0d4; color: #0f7a4a; }
+    .tl-pill.err     { background: #fff0f0; border-color: #ffb3b3; color: #c0392b; }
+    .tl-pill.nodata  { background: #fdf6e3; border-color: #f0d98a; color: #92700a; }
+
+    .tl-slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+    .tl-step-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 1px solid var(--mist); background: var(--white);
+      color: var(--slate); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .tl-step-btn:hover { background: #eff4ff; border-color: var(--blue); color: var(--blue); }
+    .tl-step-btn:active { transform: scale(0.92); }
+    .tl-step-btn svg { width: 13px; height: 13px; }
+
+    .tl-track-outer {
+      position: relative; flex: 1; height: 5px; display: flex; align-items: center;
+    }
+    .tl-rail {
+      position: absolute; left: 0; right: 0; height: 4px;
+      background: var(--mist); border-radius: 999px;
+      pointer-events: none; z-index: 1;
+    }
+    #trackFill {
+      position: absolute; left: 0; height: 4px;
+      background: var(--blue); border-radius: 999px;
+      pointer-events: none; z-index: 2; transition: width 0.05s linear;
+    }
+    #timeSlider {
+      -webkit-appearance: none; appearance: none;
+      position: relative; z-index: 4;
+      width: 100%; height: 4px;
+      background: transparent; outline: none; cursor: pointer;
+    }
+    #timeSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--white); border: 2.5px solid var(--blue);
+      box-shadow: 0 1px 6px rgba(26,108,255,0.3);
+      cursor: grab; transition: transform 0.12s;
+    }
+    #timeSlider:active::-webkit-slider-thumb {
+      cursor: grabbing; transform: scale(1.2);
+    }
+    #timeSlider::-moz-range-thumb {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--white); border: 2.5px solid var(--blue); cursor: grab;
+    }
+    #thumbTip {
+      position: absolute; top: -10px;
+      transform: translate(-50%, -100%);
+      background: var(--navy); color: var(--white);
+      font-family: var(--mono);
+      font-size: 11px; font-weight: 500;
+      padding: 4px 10px; border-radius: 7px;
+      pointer-events: none; z-index: 10; white-space: nowrap;
+    }
+    #thumbTip::after {
+      content: ''; position: absolute;
+      top: 100%; left: 50%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: var(--navy);
+    }
+    .tl-ticks { position: relative; height: 18px; margin: 0 40px; }
+    .tick {
+      position: absolute; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      pointer-events: none;
+    }
+    .tick-nub { width: 1px; height: 3px; background: #c0cce0; border-radius: 1px; }
+    .tick-text { font-family: var(--mono); font-size: 9px; font-weight: 400; color: #a0b0c8; }
+    .tick.cur .tick-nub { background: var(--blue); width: 2px; }
+    .tick.cur .tick-text { color: var(--blue); font-weight: 500; }
+
+    /* ── Popup ── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      box-shadow: 0 8px 32px rgba(15,31,61,0.18) !important;
+      padding: 0 !important; border: none !important;
+    }
+    .leaflet-popup-tip-container { display: none; }
+    .leaflet-popup-content { margin: 0 !important; }
+
+    .ip-wrap {
+      padding: 14px 16px; min-width: 170px;
+      font-family: var(--sans);
+      background: var(--white); border-radius: 12px;
+    }
+    .ip-eye {
+      font-family: var(--mono);
+      font-size: 9px; font-weight: 500; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--slate); margin-bottom: 4px;
+    }
+    .ip-val { font-size: 26px; font-weight: 800; color: var(--navy); line-height: 1; }
+    .ip-unit { font-size: 13px; font-weight: 600; color: var(--slate); }
+    .ip-band {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 7px; padding: 5px 8px;
+      border-radius: 7px; background: #f5f8ff;
+      border: 1px solid var(--mist);
+    }
+    .ip-band-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .ip-band-lbl { font-family: var(--mono); font-size: 10px; color: var(--navy); }
+    .ip-meta {
+      font-family: var(--mono);
+      font-size: 9px; color: var(--slate);
+      margin-top: 7px; line-height: 1.6;
+    }
+    .ip-loading { font-family: var(--mono); font-size: 12px; color: var(--blue); font-weight: 500; }
+    .ip-error   { font-family: var(--mono); font-size: 11px; color: #c0392b; }
+    .ip-nodata  { font-size: 13px; font-weight: 700; color: var(--slate); }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ── -->
+<div id="navbar">
+  <div class="nav-badge">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/>
+        <line x1="8" y1="16" x2="8.01" y2="16"/><line x1="8" y1="20" x2="8.01" y2="20"/>
+        <line x1="12" y1="18" x2="12.01" y2="18"/><line x1="12" y1="22" x2="12.01" y2="22"/>
+        <line x1="16" y1="16" x2="16.01" y2="16"/><line x1="16" y1="20" x2="16.01" y2="20"/>
+      </svg>
+    </div>
+    <span class="nav-title">ANDeL</span>
+    <span class="nav-tag">Rainfall Nowcast</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <span class="nav-credit">© Powered by</span>
+  <img src="CDAI logo with environmental elements (1).png" class="nav-logo-img" onerror="this.style.display='none'">
+</div>
+
+<div id="map"></div>
+
+<!-- ── Controls ── -->
+<div id="controls">
+  <div class="ctrl-heading">Overlay settings</div>
+  <div class="field"><label>Date</label><input type="date" id="dateInput" /></div>
+  <div class="field"><label>Source</label><input type="text" id="sourceInput" placeholder="e.g. andel_base_V1" /></div>
+  <div class="op-row">
+    <label>Opacity</label>
+    <input type="range" id="opSlider" min="0" max="1" step="0.05" value="0.75" />
+    <span id="opVal">75%</span>
+  </div>
+  <button id="clearBtn">Clear overlay</button>
+  <div id="status"></div>
+</div>
+
+<!-- ── Colorbar ── -->
+<div id="colorbar">
+  <strong>Rain Rate (mm/h)</strong>
+  <div class="cb-row" data-min="0.03" data-max="0.1" ><div class="cb-swatch" style="background:#A099AD"></div><span class="cb-label">0.03 – 0.1</span></div>
+  <div class="cb-row" data-min="0.1"  data-max="0.2" ><div class="cb-swatch" style="background:#00007F"></div><span class="cb-label">0.1 – 0.2</span></div>
+  <div class="cb-row" data-min="0.2"  data-max="0.5" ><div class="cb-swatch" style="background:#0000FF"></div><span class="cb-label">0.2 – 0.5</span></div>
+  <div class="cb-row" data-min="0.5"  data-max="0.75"><div class="cb-swatch" style="background:#003FFF"></div><span class="cb-label">0.5 – 0.75</span></div>
+  <div class="cb-row" data-min="0.75" data-max="1"   ><div class="cb-swatch" style="background:#00BFFF"></div><span class="cb-label">0.75 – 1</span></div>
+  <div class="cb-row" data-min="1"    data-max="1.5" ><div class="cb-swatch" style="background:#00FF7F"></div><span class="cb-label">1 – 1.5</span></div>
+  <div class="cb-row" data-min="1.5"  data-max="2"   ><div class="cb-swatch" style="background:#7FFF00"></div><span class="cb-label">1.5 – 2</span></div>
+  <div class="cb-row" data-min="2"    data-max="2.5" ><div class="cb-swatch" style="background:#FFFF00"></div><span class="cb-label">2 – 2.5</span></div>
+  <div class="cb-row" data-min="2.5"  data-max="5"   ><div class="cb-swatch" style="background:#FFBF00"></div><span class="cb-label">2.5 – 5</span></div>
+  <div class="cb-row" data-min="5"    data-max="7.5" ><div class="cb-swatch" style="background:#FF7F00"></div><span class="cb-label">5 – 7.5</span></div>
+  <div class="cb-row" data-min="7.5"  data-max="10"  ><div class="cb-swatch" style="background:#FF3F00"></div><span class="cb-label">7.5 – 10</span></div>
+  <div class="cb-row" data-min="10"   data-max="15"  ><div class="cb-swatch" style="background:#FF0000"></div><span class="cb-label">10 – 15</span></div>
+  <div class="cb-row" data-min="15"   data-max="20"  ><div class="cb-swatch" style="background:#7F0000"></div><span class="cb-label">15 – 20</span></div>
+</div>
+
+<!-- ── Timeline ── -->
+<div id="timeline">
+  <div class="tl-header">
+    <div class="tl-left">
+      <div class="tl-eyebrow">Time of day</div>
+      <div class="tl-clock" id="tlClock">10:30 <span>UTC</span></div>
+    </div>
+    <div class="tl-pill idle" id="tlPill">—</div>
+  </div>
+  <div class="tl-slider-row">
+    <button class="tl-step-btn" id="btnPrev">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="tl-track-outer" id="trackOuter">
+      <div class="tl-rail"></div>
+      <div id="trackFill"></div>
+      <input type="range" id="timeSlider" min="0" max="95" step="1" value="42" />
+      <div id="thumbTip">10:30</div>
+    </div>
+    <button class="tl-step-btn" id="btnNext">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+  <div class="tl-ticks" id="tickRow"></div>
+</div>
+
+<script>
+  const API = "http://localhost:8000";
+
+  // ── Colormap ───────────────────────────────────────────────────────────────
+  const LEVELS = [0.03,0.1,0.2,0.5,0.75,1,1.5,2,2.5,5,7.5,10,15,20];
+  const COLORS = ["#A099AD","#00007F","#0000FF","#003FFF","#00BFFF",
+                  "#00FF7F","#7FFF00","#FFFF00","#FFBF00","#FF7F00",
+                  "#FF3F00","#FF0000","#7F0000"];
+
+  function getBand(val) {
+    if (!val || isNaN(val) || val < LEVELS[0]) return null;
+    for (let i = 0; i < LEVELS.length - 1; i++)
+      if (val >= LEVELS[i] && val < LEVELS[i+1])
+        return { color: COLORS[i], label: `${LEVELS[i]} – ${LEVELS[i+1]} mm/h` };
+    return { color: COLORS[COLORS.length-1], label: `> ${LEVELS[LEVELS.length-1]} mm/h` };
+  }
+
+  function highlightColorbar(val) {
+    document.querySelectorAll("#colorbar .cb-row").forEach(row => {
+      row.classList.remove("cb-active");
+      const mn = parseFloat(row.dataset.min), mx = parseFloat(row.dataset.max);
+      if (val != null && !isNaN(val) && val >= mn && val < mx)
+        row.classList.add("cb-active");
+    });
+  }
+  function clearCbHighlight() {
+    document.querySelectorAll("#colorbar .cb-row").forEach(r => r.classList.remove("cb-active"));
+  }
+
+  // ── Time steps ─────────────────────────────────────────────────────────────
+  const steps = [];
+  for (let h = 0; h < 24; h++)
+    for (let m = 0; m < 60; m += 15)
+      steps.push(`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`);
+
+  document.getElementById("dateInput").value = new Date().toISOString().split("T")[0];
+
+  // ── Geographic bounds ──────────────────────────────────────────────────────
+  const WEST_AFRICA_BOUNDS = L.latLngBounds(
+    [2.0,  -10.5],
+    [12.5,  10.5]
+  );
+
+  const GHANA_BOUNDS = L.latLngBounds(
+    [4.5, -3.5],
+    [11.5,  1.2]
+  );
+
+  // ── Map ────────────────────────────────────────────────────────────────────
+  const map = L.map("map", {
+    minZoom:            7,
+    maxZoom:            14,
+    zoomControl:        false,
+    maxBounds:          WEST_AFRICA_BOUNDS,
+    maxBoundsViscosity: 1.0,
+  });
+
+  map.fitBounds(GHANA_BOUNDS, { padding: [20, 20] });
+
+  L.control.zoom({ position: "bottomright" }).addTo(map);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: "&copy; OpenStreetMap &copy; CartoDB",
+    subdomains:  "abcd",
+    minZoom:     7,
+    maxZoom:     19,
+  }).addTo(map);
+
+  requestAnimationFrame(() => {
+    map.invalidateSize({ animate: false });
+    if (!WEST_AFRICA_BOUNDS.contains(map.getCenter()))
+      map.fitBounds(GHANA_BOUNDS, { padding: [20, 20] });
+  });
+
+  window.addEventListener("resize", () => map.invalidateSize({ animate: false }));
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let layer       = null;
+  let debounce    = null;
+  let clickMarker = null;
+  let activePopup = null;
+  let currentTS   = "";
+  let hasData     = false;   // tracks whether current timestamp has data
+
+  // ── UI refs ────────────────────────────────────────────────────────────────
+  const slider     = document.getElementById("timeSlider");
+  const tlClock    = document.getElementById("tlClock");
+  const tlPill     = document.getElementById("tlPill");
+  const trackFill  = document.getElementById("trackFill");
+  const thumbTip   = document.getElementById("thumbTip");
+  const trackOuter = document.getElementById("trackOuter");
+  const tickRow    = document.getElementById("tickRow");
+  const opSlider   = document.getElementById("opSlider");
+  const opVal      = document.getElementById("opVal");
+  const statusEl   = document.getElementById("status");
+
+  // ── Build timeline ticks ───────────────────────────────────────────────────
+  const MAJOR = [0,8,16,24,32,40,48,56,64,72,80,88,95];
+  MAJOR.forEach(i => {
+    const el = document.createElement("div");
+    el.className = "tick"; el.dataset.i = i;
+    el.style.left = (i / 95 * 100) + "%";
+    el.innerHTML = `<div class="tick-nub"></div><div class="tick-text">${steps[i]}</div>`;
+    tickRow.appendChild(el);
+  });
+
+  // ── Timeline sync ──────────────────────────────────────────────────────────
+  function syncUI() {
+    const idx  = parseInt(slider.value);
+    const pct  = idx / 95;
+    const time = steps[idx];
+    trackFill.style.width = (pct * 100) + "%";
+    const w = trackOuter.getBoundingClientRect().width;
+    thumbTip.style.left = (pct * w) + "px";
+    thumbTip.textContent = time;
+    tlClock.innerHTML = `${time} <span>UTC</span>`;
+    tickRow.querySelectorAll(".tick").forEach(t =>
+      t.classList.toggle("cur", Math.abs(parseInt(t.dataset.i) - idx) <= 3)
+    );
+  }
+
+  function setPill(cls, txt) {
+    tlPill.className = "tl-pill " + cls;
+    tlPill.textContent = txt;
+  }
+
+  opSlider.addEventListener("input", () => {
+    opVal.textContent = Math.round(opSlider.value * 100) + "%";
+    if (layer) layer.setOpacity(parseFloat(opSlider.value));
+  });
+
+  // ── Clear overlay ──────────────────────────────────────────────────────────
+  function clearOverlay() {
+    if (layer)       { map.removeLayer(layer); layer = null; }
+    if (clickMarker) { clickMarker.remove();   clickMarker = null; }
+    if (activePopup) { map.closePopup(activePopup); activePopup = null; }
+    currentTS = "";
+    hasData   = false;
+    document.getElementById("colorbar").style.display = "none";
+    statusEl.textContent = "";
+    setPill("idle", "—");
+    clearCbHighlight();
+  }
+  document.getElementById("clearBtn").addEventListener("click", clearOverlay);
+
+  // ── Step buttons ───────────────────────────────────────────────────────────
+  document.getElementById("btnPrev").addEventListener("click", () => {
+    let v = parseInt(slider.value);
+    if (v > 0)  { slider.value = v - 1; syncUI(); triggerLoad(); }
+  });
+  document.getElementById("btnNext").addEventListener("click", () => {
+    let v = parseInt(slider.value);
+    if (v < 95) { slider.value = v + 1; syncUI(); triggerLoad(); }
+  });
+  function triggerLoad() {
+    clearTimeout(debounce);
+    debounce = setTimeout(load, 280);
+  }
+
+  // ── Load XYZ tile layer ────────────────────────────────────────────────────
+  // First checks /rainfall/value with a known point to confirm data exists
+  // for this timestamp before creating the tile layer. This avoids showing
+  // a blank tile layer silently when no data is available.
+  async function load() {
+    const idx  = parseInt(slider.value);
+    const time = steps[idx];
+    const date = document.getElementById("dateInput").value;
+    const ts   = `${date} ${time}:00`;
+    const src  = document.getElementById("sourceInput").value.trim();
+
+    const p = new URLSearchParams({ timestamp: ts });
+    if (src) p.append("source", src);
+
+    currentTS = ts;
+    hasData   = false;
+    setPill("loading", "Loading…");
+    statusEl.textContent = ts;
+
+    // Remove previous layer immediately
+    if (layer) { map.removeLayer(layer); layer = null; }
+    document.getElementById("colorbar").style.display = "none";
+
+    // ── Pre-check: does data exist for this timestamp? ──────────────────────
+    // Use Ghana centre as probe point — cheap, no tile generation needed
+    try {
+      const probe = new URLSearchParams({ timestamp: ts, lat: 7.95, lon: -1.03 });
+      if (src) probe.append("source", src);
+
+      const check = await fetch(`${API}/rainfall/value?${probe}`);
+
+      if (check.status === 404) {
+        // Backend confirmed: no data within tolerance window
+        setPill("nodata", "No data");
+        statusEl.textContent = `No data for ${time}`;
+        return;
+      }
+
+      if (!check.ok) {
+        setPill("err", "No Data Available");
+        statusEl.textContent = `Server error ${check.status}`;
+        return;
+      }
+    } catch (e) {
+      setPill("err", "Unreachable");
+      statusEl.textContent = "Cannot reach server";
+      return;
+    }
+
+    // ── Data confirmed — load tile layer ────────────────────────────────────
+    hasData = true;
+    const tileUrl = `${API}/rainfall/tiles/{z}/{x}/{y}.png?${p.toString()}`;
+
+    layer = L.tileLayer(tileUrl, {
+      opacity:        parseFloat(opSlider.value),
+      tms:            false,
+      minZoom:        7,
+      maxZoom:        14,
+      maxNativeZoom:  12,
+      keepBuffer:     2,
+      updateWhenIdle: false,
+    });
+
+    layer.on("load", () => {
+      setPill("ok", time);
+      statusEl.textContent = ts;
+      document.getElementById("colorbar").style.display = "block";
+    });
+
+    layer.on("tileerror", () => {
+      // Only flag as error if we expected data — empty tiles outside
+      // the data extent are normal and shouldn't change pill state
+    });
+
+    layer.addTo(map);
+  }
+
+  // ── Click pin icon ─────────────────────────────────────────────────────────
+  function makePinIcon() {
+    return L.divIcon({
+      className: "", iconAnchor: [10,10], popupAnchor: [0,-16],
+      html: `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="8" fill="none" stroke="#0f1f3d" stroke-width="1.5" opacity="0.3"/>
+        <line x1="10" y1="1"  x2="10" y2="7"  stroke="#0f1f3d" stroke-width="2" stroke-linecap="round"/>
+        <line x1="10" y1="13" x2="10" y2="19" stroke="#0f1f3d" stroke-width="2" stroke-linecap="round"/>
+        <line x1="1"  y1="10" x2="7"  y2="10" stroke="#0f1f3d" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13" y1="10" x2="19" y2="10" stroke="#0f1f3d" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="10" cy="10" r="3" fill="#1a6cff" stroke="#fff" stroke-width="1.5"/>
+      </svg>`
+    });
+  }
+
+  // ── Map click → /rainfall/value ────────────────────────────────────────────
+  map.on("click", async function(e) {
+    const { lat, lng } = e.latlng;
+    const idx  = parseInt(slider.value);
+    const time = steps[idx];
+
+    if (clickMarker) clickMarker.remove();
+    if (activePopup) map.closePopup(activePopup);
+    clearCbHighlight();
+
+    clickMarker = L.marker([lat, lng], { icon: makePinIcon(), interactive: false }).addTo(map);
+
+    activePopup = L.popup({
+      offset: [0,-14], closeButton: true,
+      autoClose: false, closeOnClick: false
+    })
+      .setLatLng([lat, lng])
+      .setContent(`<div class="ip-wrap"><div class="ip-loading">Reading…</div></div>`)
+      .openOn(map);
+
+    // If no data for this slot, show immediately without hitting the server
+    if (!currentTS || !hasData) {
+      activePopup.setContent(`
+        <div class="ip-wrap">
+          <div class="ip-eye">Precipitation</div>
+          <div class="ip-nodata">No data</div>
+          <div class="ip-meta">${time} UTC — no observation available</div>
+        </div>
+      `);
+      return;
+    }
+
+    try {
+      const src = document.getElementById("sourceInput").value.trim();
+      const p   = new URLSearchParams({ timestamp: currentTS, lat, lon: lng });
+      if (src) p.append("source", src);
+
+      const r = await fetch(`${API}/rainfall/value?${p}`);
+
+      // 404 = no data for this timestamp (shouldn't happen if hasData=true,
+      // but handle defensively)
+      if (r.status === 404) {
+        activePopup.setContent(`
+          <div class="ip-wrap">
+            <div class="ip-eye">Precipitation</div>
+            <div class="ip-nodata">No data</div>
+            <div class="ip-meta">${time} UTC — no observation available</div>
+          </div>
+        `);
+        return;
+      }
+
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+
+      const precip  = d.precipitation;
+      const noData  = precip === null || precip === undefined;
+      const valStr  = noData ? "No data" : precip.toFixed(2);
+      const unitStr = noData ? "" : " mm/h";
+      const band    = noData ? null : getBand(precip);
+      const bandHtml = band
+        ? `<div class="ip-band">
+             <div class="ip-band-dot" style="background:${band.color}"></div>
+             <span class="ip-band-lbl">${band.label}</span>
+           </div>`
+        : "";
+
+      highlightColorbar(noData ? null : precip);
+
+      activePopup.setContent(`
+        <div class="ip-wrap">
+          <div class="ip-eye">Precipitation</div>
+          <div>
+            <span class="ip-val">${valStr}</span>
+            <span class="ip-unit">${unitStr}</span>
+          </div>
+          ${bandHtml}
+          <div class="ip-meta">
+            ${time} UTC<br>
+            ${lat.toFixed(4)}°N &nbsp;${lng.toFixed(4)}°E
+          </div>
+        </div>
+      `);
+    } catch(err) {
+      activePopup.setContent(`<div class="ip-wrap"><div class="ip-error">${err.message}</div></div>`);
+    }
+  });
+
+  map.on("popupclose", () => {
+    clearCbHighlight();
+    if (clickMarker) { clickMarker.remove(); clickMarker = null; }
+    activePopup = null;
+  });
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+  slider.addEventListener("input", () => { syncUI(); triggerLoad(); });
+  document.getElementById("dateInput").addEventListener("change", load);
+
+  syncUI();
+  load();
+</script>
+</body>
+</html>
