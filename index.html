@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>ANDeL Rainfall Nowcast</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 
@@ -25,6 +24,8 @@
       --radius: 14px;
       --mono:   'DM Mono', monospace;
       --sans:   'Syne', sans-serif;
+      --navbar-h: 54px;
+      --timeline-h: 130px;
     }
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,150 +34,146 @@
       font-family: var(--sans);
       background: var(--navy);
       overflow: hidden;
+      height: 100dvh;
+      width: 100vw;
     }
 
     /* ── Navbar ── */
     #navbar {
       position: absolute; top: 0; left: 0; right: 0; z-index: 1100;
-      height: 54px;
+      height: var(--navbar-h);
       background: var(--mist);
       border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex; align-items: center; padding: 0 20px; gap: 12px;
+      display: flex; align-items: center; padding: 0 16px; gap: 10px;
     }
     .nav-badge { display: flex; align-items: center; gap: 8px; }
     .nav-logo {
-      width: 30px; height: 30px;
+      width: 30px; height: 30px; flex-shrink: 0;
       background: var(--slate);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
     }
     .nav-logo svg { width: 16px; height: 16px; }
-    .nav-title {
-      font-size: 18px; font-weight: 800;
-      color: var(--navy); letter-spacing: -0.5px;
-    }
+    .nav-title { font-size: 18px; font-weight: 800; color: var(--navy); letter-spacing: -0.5px; }
     .nav-tag {
-      font-family: var(--mono);
-      font-size: 10px; font-weight: 500;
-      color: var(--teal);
-      background: rgba(0,194,178,0.12);
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      color: var(--teal); background: rgba(0,194,178,0.12);
       border: 1px solid rgba(0,194,178,0.25);
-      padding: 2px 8px; border-radius: 100px;
-      letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: 100px; letter-spacing: 0.5px;
+      white-space: nowrap;
     }
     .nav-spacer { flex: 1; }
-    .nav-logo-img {
-      height: 90px; width: auto; object-fit: contain;
-      opacity: 0.7;
-    }
-    .nav-credit {
-      font-family: var(--mono);
-      font-size: 15px; color: var(--navy);
-    }
+    .nav-logo-img { height: 90px; width: auto; object-fit: contain; opacity: 0.7; }
+    .nav-credit { font-family: var(--mono); font-size: 15px; color: var(--navy); white-space: nowrap; }
 
     /* ── Map ── */
     #map {
-      position: absolute; top: 54px; left: 0; right: 0; bottom: 0;
+      position: absolute;
+      top: var(--navbar-h);
+      left: 0; right: 0;
+      bottom: var(--timeline-h);
       cursor: crosshair !important;
     }
     .leaflet-container { cursor: crosshair !important; background: #0d1b2e; }
     .leaflet-dragging .leaflet-container { cursor: grabbing !important; }
     .leaflet-top.leaflet-left { display: none; }
-    .leaflet-bottom.leaflet-right .leaflet-control-zoom {
-      margin-bottom: 168px; margin-right: 14px;
-    }
+    .leaflet-bottom.leaflet-right { margin-bottom: 8px; margin-right: 8px; }
     .leaflet-control-zoom a {
-      background: var(--glass) !important;
-      color: var(--navy) !important;
-      border: none !important;
-      box-shadow: var(--shadow) !important;
-      font-size: 16px !important;
-      font-weight: 700 !important;
+      background: var(--glass) !important; color: var(--navy) !important;
+      border: none !important; box-shadow: var(--shadow) !important;
+      font-size: 16px !important; font-weight: 700 !important;
     }
 
     /* ── Controls panel ── */
     #controls {
-      position: absolute; top: 66px; right: 14px; z-index: 1000;
-      background: var(--glass);
-      backdrop-filter: blur(12px);
-      padding: 16px; border-radius: var(--radius);
+      position: absolute; top: calc(var(--navbar-h) + 10px); right: 10px;
+      z-index: 1000;
+      background: var(--glass); backdrop-filter: blur(12px);
+      padding: 14px; border-radius: var(--radius);
       box-shadow: var(--shadow);
-      display: flex; flex-direction: column; gap: 12px;
-      min-width: 220px;
+      display: flex; flex-direction: column; gap: 10px;
+      min-width: 200px; max-width: 230px;
       border: 1px solid rgba(255,255,255,0.6);
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
+    #controls.collapsed { transform: translateX(calc(100% + 12px)); opacity: 0; pointer-events: none; }
+
+    /* Toggle button for controls on mobile */
+    #ctrlToggle {
+      position: absolute;
+      top: calc(var(--navbar-h) + 10px);
+      right: 10px;
+      z-index: 1001;
+      width: 38px; height: 38px;
+      background: var(--glass); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 10px; box-shadow: var(--shadow);
+      display: none; /* shown on mobile */
+      align-items: center; justify-content: center;
+      cursor: pointer; color: var(--navy);
+    }
+    #ctrlToggle svg { width: 18px; height: 18px; }
+
     .ctrl-heading {
       font-size: 10px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase;
-      color: var(--slate);
+      letter-spacing: 1px; text-transform: uppercase; color: var(--slate);
     }
     .field { display: flex; flex-direction: column; gap: 4px; }
     .field label {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 500;
-      letter-spacing: 0.8px; text-transform: uppercase;
-      color: var(--slate);
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      letter-spacing: 0.8px; text-transform: uppercase; color: var(--slate);
     }
     .field input[type="date"],
     .field input[type="text"] {
       padding: 7px 10px;
-      border: 1px solid var(--mist);
-      border-radius: 8px;
-      font-family: var(--mono);
-      font-size: 12px; color: var(--navy);
-      background: #f5f8ff; outline: none;
+      border: 1px solid var(--mist); border-radius: 8px;
+      font-family: var(--mono); font-size: 12px; color: var(--navy);
+      background: #f5f8ff; outline: none; width: 100%;
     }
     .field input:focus { border-color: var(--blue); background: var(--white); }
-
     .op-row { display: flex; align-items: center; gap: 8px; }
     .op-row label {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 500; letter-spacing: 0.8px;
-      text-transform: uppercase; color: var(--slate); flex-shrink: 0;
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      letter-spacing: 0.8px; text-transform: uppercase; color: var(--slate); flex-shrink: 0;
     }
     .op-row input[type="range"] { flex: 1; accent-color: var(--blue); cursor: pointer; }
     .op-row span {
-      font-family: var(--mono);
-      font-size: 11px; font-weight: 500; color: var(--blue);
-      min-width: 34px; text-align: right;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      color: var(--blue); min-width: 34px; text-align: right;
     }
-
     #clearBtn {
-      padding: 8px 10px;
-      background: transparent;
-      border: 1px solid var(--mist);
-      border-radius: 8px;
-      font-family: var(--sans);
-      font-size: 12px; font-weight: 600; color: var(--slate);
-      cursor: pointer; transition: all 0.15s;
+      padding: 8px 10px; background: transparent;
+      border: 1px solid var(--mist); border-radius: 8px;
+      font-family: var(--sans); font-size: 12px; font-weight: 600;
+      color: var(--slate); cursor: pointer; transition: all 0.15s;
     }
     #clearBtn:hover { background: var(--mist); color: var(--navy); }
     #status {
-      font-family: var(--mono);
-      font-size: 10px; color: var(--slate);
-      min-height: 13px; text-align: center;
+      font-family: var(--mono); font-size: 10px;
+      color: var(--slate); min-height: 13px; text-align: center;
     }
 
     /* ── Colorbar ── */
     #colorbar {
-      position: absolute; bottom: 168px; left: 14px; z-index: 1000;
-      background: var(--glass);
-      backdrop-filter: blur(12px);
-      padding: 12px 14px; border-radius: var(--radius);
+      position: absolute;
+      bottom: calc(var(--timeline-h) + 10px);
+      left: 10px; z-index: 1000;
+      background: var(--glass); backdrop-filter: blur(12px);
+      padding: 10px 12px; border-radius: var(--radius);
       box-shadow: var(--shadow);
       border: 1px solid rgba(255,255,255,0.6);
       display: none;
+      max-height: calc(100dvh - var(--navbar-h) - var(--timeline-h) - 80px);
+      overflow-y: auto;
     }
     #colorbar strong {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 500;
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
       letter-spacing: 0.8px; text-transform: uppercase;
       color: var(--slate); display: block; margin-bottom: 8px;
     }
     .cb-row {
       display: flex; align-items: center; gap: 8px;
-      border-radius: 5px;
-      padding: 1px 4px; margin: 0 -4px 3px;
+      border-radius: 5px; padding: 1px 4px; margin: 0 -4px 3px;
       transition: background 0.15s;
     }
     .cb-row.cb-active { background: rgba(26,108,255,0.1); }
@@ -186,37 +183,33 @@
     /* ── Timeline ── */
     #timeline {
       position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
-      background: var(--glass);
-      backdrop-filter: blur(16px);
+      height: var(--timeline-h);
+      background: var(--glass); backdrop-filter: blur(16px);
       border-top: 1px solid rgba(15,31,61,0.08);
       box-shadow: 0 -4px 30px rgba(15,31,61,0.10);
-      padding: 12px 20px 16px;
+      padding: 10px 14px 12px;
       user-select: none;
+      display: flex; flex-direction: column; justify-content: space-between;
     }
     .tl-header {
       display: flex; align-items: flex-end;
-      justify-content: space-between; margin-bottom: 10px;
+      justify-content: space-between; margin-bottom: 6px;
     }
     .tl-left { display: flex; flex-direction: column; gap: 1px; }
     .tl-eyebrow {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 500;
-      letter-spacing: 1px; text-transform: uppercase;
-      color: var(--slate);
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      letter-spacing: 1px; text-transform: uppercase; color: var(--slate);
     }
     .tl-clock {
-      font-family: var(--mono);
-      font-size: 26px; font-weight: 500;
+      font-family: var(--mono); font-size: 22px; font-weight: 500;
       color: var(--navy); letter-spacing: -1px; line-height: 1;
     }
-    .tl-clock span { font-size: 13px; font-weight: 400; color: var(--slate); margin-left: 3px; }
-
+    .tl-clock span { font-size: 12px; font-weight: 400; color: var(--slate); margin-left: 2px; }
     .tl-pill {
-      font-family: var(--mono);
-      font-size: 10px; font-weight: 500;
-      padding: 4px 12px; border-radius: 100px;
+      font-family: var(--mono); font-size: 10px; font-weight: 500;
+      padding: 4px 10px; border-radius: 100px;
       border: 1px solid transparent; transition: all 0.2s;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.3px; white-space: nowrap;
     }
     .tl-pill.idle    { background: var(--mist); border-color: #d0d8e8; color: var(--slate); }
     .tl-pill.loading { background: #eff4ff; border-color: #b3ccff; color: var(--blue); }
@@ -224,13 +217,13 @@
     .tl-pill.err     { background: #fff0f0; border-color: #ffb3b3; color: #c0392b; }
     .tl-pill.nodata  { background: #fdf6e3; border-color: #f0d98a; color: #92700a; }
 
-    .tl-slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+    .tl-slider-row { display: flex; align-items: center; gap: 8px; }
     .tl-step-btn {
-      width: 30px; height: 30px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       border: 1px solid var(--mist); background: var(--white);
       color: var(--slate); display: flex; align-items: center;
       justify-content: center; cursor: pointer; flex-shrink: 0;
-      transition: all 0.12s;
+      transition: all 0.12s; -webkit-tap-highlight-color: transparent;
     }
     .tl-step-btn:hover { background: #eff4ff; border-color: var(--blue); color: var(--blue); }
     .tl-step-btn:active { transform: scale(0.92); }
@@ -241,8 +234,7 @@
     }
     .tl-rail {
       position: absolute; left: 0; right: 0; height: 4px;
-      background: var(--mist); border-radius: 999px;
-      pointer-events: none; z-index: 1;
+      background: var(--mist); border-radius: 999px; pointer-events: none; z-index: 1;
     }
     #trackFill {
       position: absolute; left: 0; height: 4px;
@@ -252,38 +244,33 @@
     #timeSlider {
       -webkit-appearance: none; appearance: none;
       position: relative; z-index: 4;
-      width: 100%; height: 4px;
-      background: transparent; outline: none; cursor: pointer;
+      width: 100%; height: 4px; background: transparent; outline: none; cursor: pointer;
     }
     #timeSlider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 20px; height: 20px; border-radius: 50%;
+      width: 22px; height: 22px; border-radius: 50%;
       background: var(--white); border: 2.5px solid var(--blue);
       box-shadow: 0 1px 6px rgba(26,108,255,0.3);
       cursor: grab; transition: transform 0.12s;
     }
-    #timeSlider:active::-webkit-slider-thumb {
-      cursor: grabbing; transform: scale(1.2);
-    }
+    #timeSlider:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.2); }
     #timeSlider::-moz-range-thumb {
-      width: 20px; height: 20px; border-radius: 50%;
+      width: 22px; height: 22px; border-radius: 50%;
       background: var(--white); border: 2.5px solid var(--blue); cursor: grab;
     }
     #thumbTip {
       position: absolute; top: -10px;
       transform: translate(-50%, -100%);
       background: var(--navy); color: var(--white);
-      font-family: var(--mono);
-      font-size: 11px; font-weight: 500;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
       padding: 4px 10px; border-radius: 7px;
       pointer-events: none; z-index: 10; white-space: nowrap;
     }
     #thumbTip::after {
-      content: ''; position: absolute;
-      top: 100%; left: 50%; transform: translateX(-50%);
+      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
       border: 5px solid transparent; border-top-color: var(--navy);
     }
-    .tl-ticks { position: relative; height: 18px; margin: 0 40px; }
+    .tl-ticks { position: relative; height: 16px; margin: 0 36px; }
     .tick {
       position: absolute; transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -296,41 +283,156 @@
 
     /* ── Popup ── */
     .leaflet-popup-content-wrapper {
-      border-radius: 12px !important;
-      box-shadow: 0 8px 32px rgba(15,31,61,0.18) !important;
+      border-radius: 12px !important; box-shadow: 0 8px 32px rgba(15,31,61,0.18) !important;
       padding: 0 !important; border: none !important;
     }
     .leaflet-popup-tip-container { display: none; }
     .leaflet-popup-content { margin: 0 !important; }
-
     .ip-wrap {
-      padding: 14px 16px; min-width: 170px;
-      font-family: var(--sans);
+      padding: 14px 16px; min-width: 160px; font-family: var(--sans);
       background: var(--white); border-radius: 12px;
     }
     .ip-eye {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 500; letter-spacing: 0.8px;
-      text-transform: uppercase; color: var(--slate); margin-bottom: 4px;
+      font-family: var(--mono); font-size: 9px; font-weight: 500;
+      letter-spacing: 0.8px; text-transform: uppercase; color: var(--slate); margin-bottom: 4px;
     }
     .ip-val { font-size: 26px; font-weight: 800; color: var(--navy); line-height: 1; }
     .ip-unit { font-size: 13px; font-weight: 600; color: var(--slate); }
     .ip-band {
       display: flex; align-items: center; gap: 6px;
-      margin-top: 7px; padding: 5px 8px;
-      border-radius: 7px; background: #f5f8ff;
-      border: 1px solid var(--mist);
+      margin-top: 7px; padding: 5px 8px; border-radius: 7px;
+      background: #f5f8ff; border: 1px solid var(--mist);
     }
     .ip-band-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
     .ip-band-lbl { font-family: var(--mono); font-size: 10px; color: var(--navy); }
-    .ip-meta {
-      font-family: var(--mono);
-      font-size: 9px; color: var(--slate);
-      margin-top: 7px; line-height: 1.6;
-    }
+    .ip-meta { font-family: var(--mono); font-size: 9px; color: var(--slate); margin-top: 7px; line-height: 1.6; }
     .ip-loading { font-family: var(--mono); font-size: 12px; color: var(--blue); font-weight: 500; }
     .ip-error   { font-family: var(--mono); font-size: 11px; color: #c0392b; }
     .ip-nodata  { font-size: 13px; font-weight: 700; color: var(--slate); }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE BREAKPOINTS
+    ══════════════════════════════════════════ */
+
+    /* ── Tablet (≤768px) ── */
+    @media (max-width: 768px) {
+      :root {
+        --navbar-h: 48px;
+        --timeline-h: 118px;
+      }
+
+      .nav-title { font-size: 16px; }
+      .nav-tag { font-size: 9px; padding: 2px 6px; }
+      .nav-credit { display: none; }
+      .nav-logo-img { display: none; }
+
+      /* Hide controls panel by default, show via toggle */
+      #ctrlToggle { display: flex; }
+      #controls {
+        top: calc(var(--navbar-h) + 10px);
+        right: 10px;
+        min-width: 190px;
+        max-width: 210px;
+      }
+      #controls.collapsed { transform: translateX(calc(100% + 12px)); opacity: 0; pointer-events: none; }
+
+      /* Colorbar smaller */
+      #colorbar { padding: 8px 10px; }
+      .cb-label { font-size: 9px; }
+      .cb-swatch { width: 16px; height: 8px; }
+
+      .tl-clock { font-size: 20px; }
+    }
+
+    /* ── Mobile (≤480px) ── */
+    @media (max-width: 480px) {
+      :root {
+        --navbar-h: 46px;
+        --timeline-h: 140px;
+      }
+
+      #navbar { padding: 0 12px; gap: 8px; }
+      .nav-title { font-size: 15px; }
+      .nav-tag { display: none; }
+
+      /* Controls full-width sheet from top */
+      #controls {
+        top: var(--navbar-h);
+        right: 0; left: 0;
+        max-width: 100%;
+        border-radius: 0 0 var(--radius) var(--radius);
+        flex-direction: row; flex-wrap: wrap; gap: 8px;
+        padding: 12px;
+        transform: translateY(-110%);
+        opacity: 0;
+      }
+      #controls.open {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: all;
+      }
+      #controls.collapsed {
+        transform: translateY(-110%);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .ctrl-heading { width: 100%; }
+      .field { flex: 1 1 130px; }
+      .op-row { flex: 1 1 100%; }
+      #clearBtn { flex: 1 1 100%; }
+      #status { flex: 1 1 100%; }
+
+      #ctrlToggle {
+        top: calc(var(--navbar-h) + 8px);
+        right: 8px;
+        width: 36px; height: 36px;
+      }
+
+      /* Colorbar — compact horizontal strip on mobile */
+      #colorbar {
+        bottom: calc(var(--timeline-h) + 8px);
+        left: 8px; right: 8px;
+        max-height: 48px;
+        overflow-x: auto; overflow-y: hidden;
+        display: none;
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 8px;
+      }
+      #colorbar.show { display: flex; }
+      #colorbar strong { display: none; }
+      .cb-row { margin: 0; padding: 0 2px; flex-shrink: 0; }
+      .cb-label { font-size: 8px; white-space: nowrap; }
+      .cb-swatch { width: 14px; height: 8px; }
+
+      /* Timeline bigger for touch */
+      #timeline { padding: 10px 12px 14px; }
+      .tl-clock { font-size: 24px; }
+      .tl-step-btn { width: 36px; height: 36px; }
+      #timeSlider::-webkit-slider-thumb { width: 26px; height: 26px; }
+
+      /* Fewer ticks on mobile */
+      .tick-text { font-size: 8px; }
+    }
+
+    /* ── Very small (≤360px) ── */
+    @media (max-width: 360px) {
+      :root { --timeline-h: 148px; }
+      .tl-clock { font-size: 20px; }
+      .nav-logo { width: 26px; height: 26px; }
+    }
+
+    /* ── Landscape mobile ── */
+    @media (max-height: 500px) and (orientation: landscape) {
+      :root {
+        --navbar-h: 42px;
+        --timeline-h: 100px;
+      }
+      .tl-ticks { display: none; }
+      .tl-clock { font-size: 18px; }
+      #colorbar { max-height: calc(100dvh - var(--navbar-h) - var(--timeline-h) - 60px); }
+    }
   </style>
 </head>
 <body>
@@ -353,6 +455,13 @@
   <span class="nav-credit">© Powered by</span>
   <img src="CDAI logo with environmental elements (1).png" class="nav-logo-img" onerror="this.style.display='none'">
 </div>
+
+<!-- ── Controls toggle (mobile) ── -->
+<button id="ctrlToggle" aria-label="Toggle settings">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+  </svg>
+</button>
 
 <div id="map"></div>
 
@@ -398,7 +507,7 @@
     <div class="tl-pill idle" id="tlPill">—</div>
   </div>
   <div class="tl-slider-row">
-    <button class="tl-step-btn" id="btnPrev">
+    <button class="tl-step-btn" id="btnPrev" aria-label="Previous">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="tl-track-outer" id="trackOuter">
@@ -407,7 +516,7 @@
       <input type="range" id="timeSlider" min="0" max="95" step="1" value="42" />
       <div id="thumbTip">10:30</div>
     </div>
-    <button class="tl-step-btn" id="btnNext">
+    <button class="tl-step-btn" id="btnNext" aria-label="Next">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
   </div>
@@ -452,34 +561,24 @@
   document.getElementById("dateInput").value = new Date().toISOString().split("T")[0];
 
   // ── Geographic bounds ──────────────────────────────────────────────────────
-  const WEST_AFRICA_BOUNDS = L.latLngBounds(
-    [2.0,  -10.5],
-    [12.5,  10.5]
-  );
-
-  const GHANA_BOUNDS = L.latLngBounds(
-    [4.5, -3.5],
-    [11.5,  1.2]
-  );
+  const WEST_AFRICA_BOUNDS = L.latLngBounds([2.0,-10.5],[12.5,10.5]);
+  const GHANA_BOUNDS       = L.latLngBounds([4.5,-3.5],[11.5,1.2]);
 
   // ── Map ────────────────────────────────────────────────────────────────────
   const map = L.map("map", {
-    minZoom:            7,
-    maxZoom:            14,
-    zoomControl:        false,
-    maxBounds:          WEST_AFRICA_BOUNDS,
+    minZoom: 7, maxZoom: 14,
+    zoomControl: false,
+    maxBounds: WEST_AFRICA_BOUNDS,
     maxBoundsViscosity: 1.0,
+    tap: true,   // important for iOS touch
   });
 
   map.fitBounds(GHANA_BOUNDS, { padding: [20, 20] });
-
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: "&copy; OpenStreetMap &copy; CartoDB",
-    subdomains:  "abcd",
-    minZoom:     7,
-    maxZoom:     19,
+    subdomains: "abcd", minZoom: 7, maxZoom: 19,
   }).addTo(map);
 
   requestAnimationFrame(() => {
@@ -488,7 +587,49 @@
       map.fitBounds(GHANA_BOUNDS, { padding: [20, 20] });
   });
 
-  window.addEventListener("resize", () => map.invalidateSize({ animate: false }));
+  window.addEventListener("resize", () => {
+    map.invalidateSize({ animate: false });
+    syncUI(); // re-sync thumb position on resize
+  });
+
+  // ── Controls toggle ────────────────────────────────────────────────────────
+  const ctrlPanel  = document.getElementById("controls");
+  const ctrlToggle = document.getElementById("ctrlToggle");
+  let ctrlOpen = false;
+
+  ctrlToggle.addEventListener("click", () => {
+    ctrlOpen = !ctrlOpen;
+    if (ctrlOpen) {
+      ctrlPanel.classList.remove("collapsed");
+      ctrlPanel.classList.add("open");
+    } else {
+      ctrlPanel.classList.add("collapsed");
+      ctrlPanel.classList.remove("open");
+    }
+  });
+
+  // Close controls when clicking map on mobile
+  map.on("click", () => {
+    if (window.innerWidth <= 480 && ctrlOpen) {
+      ctrlOpen = false;
+      ctrlPanel.classList.add("collapsed");
+      ctrlPanel.classList.remove("open");
+    }
+  });
+
+  // Initialize: collapsed on mobile, open on desktop
+  function initControls() {
+    if (window.innerWidth <= 768) {
+      ctrlPanel.classList.add("collapsed");
+      ctrlOpen = false;
+    } else {
+      ctrlPanel.classList.remove("collapsed");
+      ctrlPanel.classList.remove("open");
+      ctrlOpen = true;
+    }
+  }
+  initControls();
+  window.addEventListener("resize", initControls);
 
   // ── State ──────────────────────────────────────────────────────────────────
   let layer       = null;
@@ -496,7 +637,7 @@
   let clickMarker = null;
   let activePopup = null;
   let currentTS   = "";
-  let hasData     = false;   // tracks whether current timestamp has data
+  let hasData     = false;
 
   // ── UI refs ────────────────────────────────────────────────────────────────
   const slider     = document.getElementById("timeSlider");
@@ -510,15 +651,24 @@
   const opVal      = document.getElementById("opVal");
   const statusEl   = document.getElementById("status");
 
-  // ── Build timeline ticks ───────────────────────────────────────────────────
-  const MAJOR = [0,8,16,24,32,40,48,56,64,72,80,88,95];
-  MAJOR.forEach(i => {
-    const el = document.createElement("div");
-    el.className = "tick"; el.dataset.i = i;
-    el.style.left = (i / 95 * 100) + "%";
-    el.innerHTML = `<div class="tick-nub"></div><div class="tick-text">${steps[i]}</div>`;
-    tickRow.appendChild(el);
-  });
+  // ── Build ticks — fewer on small screens ──────────────────────────────────
+  function buildTicks() {
+    tickRow.innerHTML = "";
+    const isMobile = window.innerWidth <= 480;
+    const MAJOR = isMobile
+      ? [0, 16, 32, 48, 64, 80, 95]       // every 4hrs on mobile
+      : [0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 95]; // every 2hrs desktop
+
+    MAJOR.forEach(i => {
+      const el = document.createElement("div");
+      el.className = "tick"; el.dataset.i = i;
+      el.style.left = (i / 95 * 100) + "%";
+      el.innerHTML = `<div class="tick-nub"></div><div class="tick-text">${steps[i]}</div>`;
+      tickRow.appendChild(el);
+    });
+  }
+  buildTicks();
+  window.addEventListener("resize", buildTicks);
 
   // ── Timeline sync ──────────────────────────────────────────────────────────
   function syncUI() {
@@ -545,14 +695,24 @@
     if (layer) layer.setOpacity(parseFloat(opSlider.value));
   });
 
+  // ── Colorbar visibility ────────────────────────────────────────────────────
+  function showColorbar() {
+    const cb = document.getElementById("colorbar");
+    cb.style.display = window.innerWidth <= 480 ? "flex" : "block";
+    cb.classList.add("show");
+  }
+  function hideColorbar() {
+    document.getElementById("colorbar").style.display = "none";
+    document.getElementById("colorbar").classList.remove("show");
+  }
+
   // ── Clear overlay ──────────────────────────────────────────────────────────
   function clearOverlay() {
     if (layer)       { map.removeLayer(layer); layer = null; }
     if (clickMarker) { clickMarker.remove();   clickMarker = null; }
     if (activePopup) { map.closePopup(activePopup); activePopup = null; }
-    currentTS = "";
-    hasData   = false;
-    document.getElementById("colorbar").style.display = "none";
+    currentTS = ""; hasData = false;
+    hideColorbar();
     statusEl.textContent = "";
     setPill("idle", "—");
     clearCbHighlight();
@@ -574,9 +734,6 @@
   }
 
   // ── Load XYZ tile layer ────────────────────────────────────────────────────
-  // First checks /rainfall/value with a known point to confirm data exists
-  // for this timestamp before creating the tile layer. This avoids showing
-  // a blank tile layer silently when no data is available.
   async function load() {
     const idx  = parseInt(slider.value);
     const time = steps[idx];
@@ -587,30 +744,23 @@
     const p = new URLSearchParams({ timestamp: ts });
     if (src) p.append("source", src);
 
-    currentTS = ts;
-    hasData   = false;
+    currentTS = ts; hasData = false;
     setPill("loading", "Loading…");
     statusEl.textContent = ts;
 
-    // Remove previous layer immediately
     if (layer) { map.removeLayer(layer); layer = null; }
-    document.getElementById("colorbar").style.display = "none";
+    hideColorbar();
 
-    // ── Pre-check: does data exist for this timestamp? ──────────────────────
-    // Use Ghana centre as probe point — cheap, no tile generation needed
     try {
       const probe = new URLSearchParams({ timestamp: ts, lat: 7.95, lon: -1.03 });
       if (src) probe.append("source", src);
-
       const check = await fetch(`${API}/rainfall/value?${probe}`);
 
       if (check.status === 404) {
-        // Backend confirmed: no data within tolerance window
         setPill("nodata", "No data");
         statusEl.textContent = `No data for ${time}`;
         return;
       }
-
       if (!check.ok) {
         setPill("err", "No Data Available");
         statusEl.textContent = `Server error ${check.status}`;
@@ -622,29 +772,19 @@
       return;
     }
 
-    // ── Data confirmed — load tile layer ────────────────────────────────────
     hasData = true;
     const tileUrl = `${API}/rainfall/tiles/{z}/{x}/{y}.png?${p.toString()}`;
 
     layer = L.tileLayer(tileUrl, {
-      opacity:        parseFloat(opSlider.value),
-      tms:            false,
-      minZoom:        7,
-      maxZoom:        14,
-      maxNativeZoom:  12,
-      keepBuffer:     2,
-      updateWhenIdle: false,
+      opacity: parseFloat(opSlider.value),
+      tms: false, minZoom: 7, maxZoom: 14, maxNativeZoom: 12,
+      keepBuffer: 2, updateWhenIdle: false,
     });
 
     layer.on("load", () => {
       setPill("ok", time);
       statusEl.textContent = ts;
-      document.getElementById("colorbar").style.display = "block";
-    });
-
-    layer.on("tileerror", () => {
-      // Only flag as error if we expected data — empty tiles outside
-      // the data extent are normal and shouldn't change pill state
+      showColorbar();
     });
 
     layer.addTo(map);
@@ -678,14 +818,12 @@
     clickMarker = L.marker([lat, lng], { icon: makePinIcon(), interactive: false }).addTo(map);
 
     activePopup = L.popup({
-      offset: [0,-14], closeButton: true,
-      autoClose: false, closeOnClick: false
+      offset: [0,-14], closeButton: true, autoClose: false, closeOnClick: false
     })
       .setLatLng([lat, lng])
       .setContent(`<div class="ip-wrap"><div class="ip-loading">Reading…</div></div>`)
       .openOn(map);
 
-    // If no data for this slot, show immediately without hitting the server
     if (!currentTS || !hasData) {
       activePopup.setContent(`
         <div class="ip-wrap">
@@ -701,11 +839,8 @@
       const src = document.getElementById("sourceInput").value.trim();
       const p   = new URLSearchParams({ timestamp: currentTS, lat, lon: lng });
       if (src) p.append("source", src);
-
       const r = await fetch(`${API}/rainfall/value?${p}`);
 
-      // 404 = no data for this timestamp (shouldn't happen if hasData=true,
-      // but handle defensively)
       if (r.status === 404) {
         activePopup.setContent(`
           <div class="ip-wrap">
@@ -716,7 +851,6 @@
         `);
         return;
       }
-
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
 
@@ -729,23 +863,16 @@
         ? `<div class="ip-band">
              <div class="ip-band-dot" style="background:${band.color}"></div>
              <span class="ip-band-lbl">${band.label}</span>
-           </div>`
-        : "";
+           </div>` : "";
 
       highlightColorbar(noData ? null : precip);
 
       activePopup.setContent(`
         <div class="ip-wrap">
           <div class="ip-eye">Precipitation</div>
-          <div>
-            <span class="ip-val">${valStr}</span>
-            <span class="ip-unit">${unitStr}</span>
-          </div>
+          <div><span class="ip-val">${valStr}</span><span class="ip-unit">${unitStr}</span></div>
           ${bandHtml}
-          <div class="ip-meta">
-            ${time} UTC<br>
-            ${lat.toFixed(4)}°N &nbsp;${lng.toFixed(4)}°E
-          </div>
+          <div class="ip-meta">${time} UTC<br>${lat.toFixed(4)}°N &nbsp;${lng.toFixed(4)}°E</div>
         </div>
       `);
     } catch(err) {
