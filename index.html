@@ -19,7 +19,8 @@
       --slate:  #4a6080;
       --mist:   #e8edf5;
       --white:  #ffffff;
-      --glass:  rgba(255,255,255,0.94);
+      --glass:  rgba(255,255,255,0.88);
+      --glass-dark: rgba(15,31,61,0.72);
       --shadow: 0 4px 24px rgba(15,31,61,0.13);
       --radius: 14px;
       --mono:   'DM Mono', monospace;
@@ -98,7 +99,6 @@
     }
     #controls.collapsed { transform: translateX(calc(100% + 12px)); opacity: 0; pointer-events: none; }
 
-    /* Toggle button for controls on mobile */
     #ctrlToggle {
       position: absolute;
       top: calc(var(--navbar-h) + 10px);
@@ -108,7 +108,7 @@
       background: var(--glass); backdrop-filter: blur(12px);
       border: 1px solid rgba(255,255,255,0.6);
       border-radius: 10px; box-shadow: var(--shadow);
-      display: none; /* shown on mobile */
+      display: none;
       align-items: center; justify-content: center;
       cursor: pointer; color: var(--navy);
     }
@@ -153,32 +153,151 @@
       color: var(--slate); min-height: 13px; text-align: center;
     }
 
-    /* ── Colorbar ── */
-    #colorbar {
+    /* ══════════════════════════════════════════
+       COLORBAR — Meteored style
+       Horizontal strip, bottom-left, semi-transparent
+       Collapsed = pill with icon + label
+       Expanded = full horizontal legend
+    ══════════════════════════════════════════ */
+
+    #colorbar-wrap {
       position: absolute;
       bottom: calc(var(--timeline-h) + 10px);
-      left: 10px; z-index: 1000;
-      background: var(--glass); backdrop-filter: blur(12px);
-      padding: 10px 12px; border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255,255,255,0.6);
-      display: none;
-      max-height: calc(100dvh - var(--navbar-h) - var(--timeline-h) - 80px);
-      overflow-y: auto;
+      left: 10px;
+      z-index: 1000;
+      display: none; /* shown when data is loaded */
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
     }
-    #colorbar strong {
-      font-family: var(--mono); font-size: 9px; font-weight: 500;
-      letter-spacing: 0.8px; text-transform: uppercase;
-      color: var(--slate); display: block; margin-bottom: 8px;
+    #colorbar-wrap.cb-visible { display: flex; }
+
+    /* The toggle pill (always visible when wrap is shown) */
+    #cb-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      height: 32px;
+      background: var(--glass-dark);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px;
+      cursor: pointer;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    .cb-row {
-      display: flex; align-items: center; gap: 8px;
-      border-radius: 5px; padding: 1px 4px; margin: 0 -4px 3px;
+    #cb-toggle:hover { background: rgba(26,108,255,0.65); }
+    #cb-toggle svg { width: 13px; height: 13px; flex-shrink: 0; transition: transform 0.25s; }
+    #cb-toggle.open svg { transform: rotate(180deg); }
+
+    /* The gradient gradient bar — always visible when wrap is shown */
+    #cb-gradient-bar {
+      height: 12px;
+      width: 70px;
+      border-radius: 0 3px 3px 0;
+      flex-shrink: 0;
+      background: linear-gradient(to right,
+        #A099AD 0%,
+        #00007F 8%,
+        #0000FF 15%,
+        #003FFF 22%,
+        #00BFFF 30%,
+        #00FF7F 38%,
+        #7FFF00 46%,
+        #FFFF00 54%,
+        #FFBF00 62%,
+        #FF7F00 70%,
+        #FF3F00 78%,
+        #FF0000 88%,
+        #7F0000 100%
+      );
+      border: 1px solid rgba(255,255,255,0.18);
+      margin-left: 6px;
+      cursor: pointer;
+      transition: width 0.3s ease;
+    }
+
+    /* Expanded panel */
+    #cb-panel {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--glass-dark);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 6px 10px;
+      margin-left: 8px;
+      overflow: hidden;
+      max-width: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: max-width 0.35s cubic-bezier(0.4,0,0.2,1),
+                  opacity 0.25s ease,
+                  padding 0.3s ease;
+      
+    }
+    #cb-panel.open {
+      max-width: 340px;
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .cb-title {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .cb-items {
+      display: grid;
+      grid-template-columns: repeat(3, auto); /* 3 items per row */
+      gap: 4px 6px;
+      justify-content: start;
+    }
+    .cb-items::-webkit-scrollbar { display: none; }
+
+    .cb-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: default;
       transition: background 0.15s;
+      width: max-content;   /
     }
-    .cb-row.cb-active { background: rgba(26,108,255,0.1); }
-    .cb-swatch { width: 20px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-    .cb-label { font-family: var(--mono); font-size: 10px; color: var(--navy); }
+    .cb-item.cb-active {
+      background: rgba(255,255,255,0.15);
+      outline: 1px solid rgba(255,255,255,0.3);
+    }
+    .cb-swatch {
+      width: 18px; height: 9px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .cb-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+    }
 
     /* ── Timeline ── */
     #timeline {
@@ -310,128 +429,70 @@
     .ip-error   { font-family: var(--mono); font-size: 11px; color: #c0392b; }
     .ip-nodata  { font-size: 13px; font-weight: 700; color: var(--slate); }
 
-    /* ══════════════════════════════════════════
-       RESPONSIVE BREAKPOINTS
-    ══════════════════════════════════════════ */
+    /* ══ RESPONSIVE ══ */
 
-    /* ── Tablet (≤768px) ── */
     @media (max-width: 768px) {
-      :root {
-        --navbar-h: 48px;
-        --timeline-h: 118px;
-      }
-
+      :root { --navbar-h: 48px; --timeline-h: 118px; }
       .nav-title { font-size: 16px; }
       .nav-tag { font-size: 9px; padding: 2px 6px; }
       .nav-credit { display: none; }
       .nav-logo-img { display: none; }
-
-      /* Hide controls panel by default, show via toggle */
       #ctrlToggle { display: flex; }
-      #controls {
-        top: calc(var(--navbar-h) + 10px);
-        right: 10px;
-        min-width: 190px;
-        max-width: 210px;
-      }
+      #controls { top: calc(var(--navbar-h) + 10px); right: 10px; min-width: 190px; max-width: 210px; }
       #controls.collapsed { transform: translateX(calc(100% + 12px)); opacity: 0; pointer-events: none; }
-
-      /* Colorbar smaller */
-      #colorbar { padding: 8px 10px; }
-      .cb-label { font-size: 9px; }
-      .cb-swatch { width: 16px; height: 8px; }
-
       .tl-clock { font-size: 20px; }
+
+      /* Colorbar: tighter on tablet */
+      #colorbar-wrap { bottom: calc(var(--timeline-h) + 8px); left: 8px; }
+      .cb-label { font-size: 8px; }
+      .cb-swatch { width: 14px; height: 8px; }
+      #cb-gradient-bar { width: 50px; }
     }
 
-    /* ── Mobile (≤480px) ── */
     @media (max-width: 480px) {
-      :root {
-        --navbar-h: 46px;
-        --timeline-h: 140px;
-      }
-
+      :root { --navbar-h: 46px; --timeline-h: 140px; }
       #navbar { padding: 0 12px; gap: 8px; }
       .nav-title { font-size: 15px; }
       .nav-tag { display: none; }
 
-      /* Controls full-width sheet from top */
       #controls {
-        top: var(--navbar-h);
-        right: 0; left: 0;
-        max-width: 100%;
+        top: var(--navbar-h); right: 0; left: 0; max-width: 100%;
         border-radius: 0 0 var(--radius) var(--radius);
-        flex-direction: row; flex-wrap: wrap; gap: 8px;
-        padding: 12px;
-        transform: translateY(-110%);
-        opacity: 0;
+        flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 12px;
+        transform: translateY(-110%); opacity: 0;
       }
-      #controls.open {
-        transform: translateY(0);
-        opacity: 1;
-        pointer-events: all;
-      }
-      #controls.collapsed {
-        transform: translateY(-110%);
-        opacity: 0;
-        pointer-events: none;
-      }
+      #controls.open { transform: translateY(0); opacity: 1; pointer-events: all; }
+      #controls.collapsed { transform: translateY(-110%); opacity: 0; pointer-events: none; }
       .ctrl-heading { width: 100%; }
       .field { flex: 1 1 130px; }
       .op-row { flex: 1 1 100%; }
       #clearBtn { flex: 1 1 100%; }
       #status { flex: 1 1 100%; }
+      #ctrlToggle { top: calc(var(--navbar-h) + 8px); right: 8px; width: 36px; height: 36px; }
 
-      #ctrlToggle {
-        top: calc(var(--navbar-h) + 8px);
-        right: 8px;
-        width: 36px; height: 36px;
-      }
+      /* On mobile, keep colorbar compact, scroll horizontally if needed */
+      #colorbar-wrap { bottom: calc(var(--timeline-h) + 8px); left: 6px; right: 6px; }
+      #cb-panel.open { max-width: calc(100vw - 90px); overflow: hidden; }
+      .cb-items { overflow-x: auto; }
+      #cb-gradient-bar { width: 40px; }
 
-      /* Colorbar — compact horizontal strip on mobile */
-      #colorbar {
-        bottom: calc(var(--timeline-h) + 8px);
-        left: 8px; right: 8px;
-        max-height: 48px;
-        overflow-x: auto; overflow-y: hidden;
-        display: none;
-        flex-direction: row;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 8px;
-      }
-      #colorbar.show { display: flex; }
-      #colorbar strong { display: none; }
-      .cb-row { margin: 0; padding: 0 2px; flex-shrink: 0; }
-      .cb-label { font-size: 8px; white-space: nowrap; }
-      .cb-swatch { width: 14px; height: 8px; }
-
-      /* Timeline bigger for touch */
       #timeline { padding: 10px 12px 14px; }
       .tl-clock { font-size: 24px; }
       .tl-step-btn { width: 36px; height: 36px; }
       #timeSlider::-webkit-slider-thumb { width: 26px; height: 26px; }
-
-      /* Fewer ticks on mobile */
       .tick-text { font-size: 8px; }
     }
 
-    /* ── Very small (≤360px) ── */
     @media (max-width: 360px) {
       :root { --timeline-h: 148px; }
       .tl-clock { font-size: 20px; }
       .nav-logo { width: 26px; height: 26px; }
     }
 
-    /* ── Landscape mobile ── */
     @media (max-height: 500px) and (orientation: landscape) {
-      :root {
-        --navbar-h: 42px;
-        --timeline-h: 100px;
-      }
+      :root { --navbar-h: 42px; --timeline-h: 100px; }
       .tl-ticks { display: none; }
       .tl-clock { font-size: 18px; }
-      #colorbar { max-height: calc(100dvh - var(--navbar-h) - var(--timeline-h) - 60px); }
     }
   </style>
 </head>
@@ -479,22 +540,40 @@
   <div id="status"></div>
 </div>
 
-<!-- ── Colorbar ── -->
-<div id="colorbar">
-  <strong>Rain Rate (mm/h)</strong>
-  <div class="cb-row" data-min="0.03" data-max="0.1" ><div class="cb-swatch" style="background:#A099AD"></div><span class="cb-label">0.03 – 0.1</span></div>
-  <div class="cb-row" data-min="0.1"  data-max="0.2" ><div class="cb-swatch" style="background:#00007F"></div><span class="cb-label">0.1 – 0.2</span></div>
-  <div class="cb-row" data-min="0.2"  data-max="0.5" ><div class="cb-swatch" style="background:#0000FF"></div><span class="cb-label">0.2 – 0.5</span></div>
-  <div class="cb-row" data-min="0.5"  data-max="0.75"><div class="cb-swatch" style="background:#003FFF"></div><span class="cb-label">0.5 – 0.75</span></div>
-  <div class="cb-row" data-min="0.75" data-max="1"   ><div class="cb-swatch" style="background:#00BFFF"></div><span class="cb-label">0.75 – 1</span></div>
-  <div class="cb-row" data-min="1"    data-max="1.5" ><div class="cb-swatch" style="background:#00FF7F"></div><span class="cb-label">1 – 1.5</span></div>
-  <div class="cb-row" data-min="1.5"  data-max="2"   ><div class="cb-swatch" style="background:#7FFF00"></div><span class="cb-label">1.5 – 2</span></div>
-  <div class="cb-row" data-min="2"    data-max="2.5" ><div class="cb-swatch" style="background:#FFFF00"></div><span class="cb-label">2 – 2.5</span></div>
-  <div class="cb-row" data-min="2.5"  data-max="5"   ><div class="cb-swatch" style="background:#FFBF00"></div><span class="cb-label">2.5 – 5</span></div>
-  <div class="cb-row" data-min="5"    data-max="7.5" ><div class="cb-swatch" style="background:#FF7F00"></div><span class="cb-label">5 – 7.5</span></div>
-  <div class="cb-row" data-min="7.5"  data-max="10"  ><div class="cb-swatch" style="background:#FF3F00"></div><span class="cb-label">7.5 – 10</span></div>
-  <div class="cb-row" data-min="10"   data-max="15"  ><div class="cb-swatch" style="background:#FF0000"></div><span class="cb-label">10 – 15</span></div>
-  <div class="cb-row" data-min="15"   data-max="20"  ><div class="cb-swatch" style="background:#7F0000"></div><span class="cb-label">15 – 20</span></div>
+<!-- ════════════════════════════════════════════
+     COLORBAR — Meteored-style horizontal legend
+════════════════════════════════════════════ -->
+<div id="colorbar-wrap">
+  <!-- Toggle pill -->
+  <button id="cb-toggle" aria-label="Toggle legend">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18l6-6-6-6"/>
+    </svg>
+    Rain (mm/h)
+  </button>
+
+  <!-- Mini gradient preview bar (always visible) -->
+  <div id="cb-gradient-bar" title="Click to expand legend"></div>
+
+  <!-- Expanded legend panel -->
+  <div id="cb-panel">
+    <span class="cb-title">Rain Rate</span>
+    <div class="cb-items" id="cb-items">
+      <div class="cb-item" data-min="0.03" data-max="0.1" ><div class="cb-swatch" style="background:#A099AD"></div><span class="cb-label">0.03–0.1</span></div>
+      <div class="cb-item" data-min="0.1"  data-max="0.2" ><div class="cb-swatch" style="background:#00007F"></div><span class="cb-label">0.1–0.2</span></div>
+      <div class="cb-item" data-min="0.2"  data-max="0.5" ><div class="cb-swatch" style="background:#0000FF"></div><span class="cb-label">0.2–0.5</span></div>
+      <div class="cb-item" data-min="0.5"  data-max="0.75"><div class="cb-swatch" style="background:#003FFF"></div><span class="cb-label">0.5–0.75</span></div>
+      <div class="cb-item" data-min="0.75" data-max="1"   ><div class="cb-swatch" style="background:#00BFFF"></div><span class="cb-label">0.75–1</span></div>
+      <div class="cb-item" data-min="1"    data-max="1.5" ><div class="cb-swatch" style="background:#00FF7F"></div><span class="cb-label">1–1.5</span></div>
+      <div class="cb-item" data-min="1.5"  data-max="2"   ><div class="cb-swatch" style="background:#7FFF00"></div><span class="cb-label">1.5–2</span></div>
+      <div class="cb-item" data-min="2"    data-max="2.5" ><div class="cb-swatch" style="background:#FFFF00"></div><span class="cb-label">2–2.5</span></div>
+      <div class="cb-item" data-min="2.5"  data-max="5"   ><div class="cb-swatch" style="background:#FFBF00"></div><span class="cb-label">2.5–5</span></div>
+      <div class="cb-item" data-min="5"    data-max="7.5" ><div class="cb-swatch" style="background:#FF7F00"></div><span class="cb-label">5–7.5</span></div>
+      <div class="cb-item" data-min="7.5"  data-max="10"  ><div class="cb-swatch" style="background:#FF3F00"></div><span class="cb-label">7.5–10</span></div>
+      <div class="cb-item" data-min="10"   data-max="15"  ><div class="cb-swatch" style="background:#FF0000"></div><span class="cb-label">10–15</span></div>
+      <div class="cb-item" data-min="15"   data-max="20"  ><div class="cb-swatch" style="background:#7F0000"></div><span class="cb-label">15–20</span></div>
+    </div>
+  </div>
 </div>
 
 <!-- ── Timeline ── -->
@@ -524,7 +603,7 @@
 </div>
 
 <script>
-  const API = "https://andelxbackend-production.up.railway.app";
+    const API = "https://andelxbackend-production.up.railway.app";
 
   // ── Colormap ───────────────────────────────────────────────────────────────
   const LEVELS = [0.03,0.1,0.2,0.5,0.75,1,1.5,2,2.5,5,7.5,10,15,20];
@@ -540,8 +619,24 @@
     return { color: COLORS[COLORS.length-1], label: `> ${LEVELS[LEVELS.length-1]} mm/h` };
   }
 
+  // ── Colorbar interactions ──────────────────────────────────────────────────
+  const cbWrap   = document.getElementById("colorbar-wrap");
+  const cbToggle = document.getElementById("cb-toggle");
+  const cbPanel  = document.getElementById("cb-panel");
+  const cbGrad   = document.getElementById("cb-gradient-bar");
+  let cbOpen = false;
+
+  function toggleColorbar() {
+    cbOpen = !cbOpen;
+    cbPanel.classList.toggle("open", cbOpen);
+    cbToggle.classList.toggle("open", cbOpen);
+  }
+
+  cbToggle.addEventListener("click", toggleColorbar);
+  cbGrad.addEventListener("click", toggleColorbar);
+
   function highlightColorbar(val) {
-    document.querySelectorAll("#colorbar .cb-row").forEach(row => {
+    document.querySelectorAll("#cb-items .cb-item").forEach(row => {
       row.classList.remove("cb-active");
       const mn = parseFloat(row.dataset.min), mx = parseFloat(row.dataset.max);
       if (val != null && !isNaN(val) && val >= mn && val < mx)
@@ -549,7 +644,18 @@
     });
   }
   function clearCbHighlight() {
-    document.querySelectorAll("#colorbar .cb-row").forEach(r => r.classList.remove("cb-active"));
+    document.querySelectorAll("#cb-items .cb-item").forEach(r => r.classList.remove("cb-active"));
+  }
+
+  function showColorbar() {
+    cbWrap.classList.add("cb-visible");
+  }
+  function hideColorbar() {
+    cbWrap.classList.remove("cb-visible");
+    // also collapse the panel
+    cbOpen = false;
+    cbPanel.classList.remove("open");
+    cbToggle.classList.remove("open");
   }
 
   // ── Time steps ─────────────────────────────────────────────────────────────
@@ -570,7 +676,7 @@
     zoomControl: false,
     maxBounds: WEST_AFRICA_BOUNDS,
     maxBoundsViscosity: 1.0,
-    tap: true,   // important for iOS touch
+    tap: true,
   });
 
   map.fitBounds(GHANA_BOUNDS, { padding: [20, 20] });
@@ -589,7 +695,7 @@
 
   window.addEventListener("resize", () => {
     map.invalidateSize({ animate: false });
-    syncUI(); // re-sync thumb position on resize
+    syncUI();
   });
 
   // ── Controls toggle ────────────────────────────────────────────────────────
@@ -608,7 +714,6 @@
     }
   });
 
-  // Close controls when clicking map on mobile
   map.on("click", () => {
     if (window.innerWidth <= 480 && ctrlOpen) {
       ctrlOpen = false;
@@ -617,7 +722,6 @@
     }
   });
 
-  // Initialize: collapsed on mobile, open on desktop
   function initControls() {
     if (window.innerWidth <= 768) {
       ctrlPanel.classList.add("collapsed");
@@ -651,14 +755,12 @@
   const opVal      = document.getElementById("opVal");
   const statusEl   = document.getElementById("status");
 
-  // ── Build ticks — fewer on small screens ──────────────────────────────────
   function buildTicks() {
     tickRow.innerHTML = "";
     const isMobile = window.innerWidth <= 480;
     const MAJOR = isMobile
-      ? [0, 16, 32, 48, 64, 80, 95]       // every 4hrs on mobile
-      : [0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 95]; // every 2hrs desktop
-
+      ? [0, 16, 32, 48, 64, 80, 95]
+      : [0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 95];
     MAJOR.forEach(i => {
       const el = document.createElement("div");
       el.className = "tick"; el.dataset.i = i;
@@ -669,14 +771,14 @@
   }
   buildTicks();
   window.addEventListener("resize", buildTicks);
-      function snapToCurrentTime() {
-          const now = new Date();
-          const totalMins = now.getHours() * 60 + now.getMinutes();
-          // Round down to nearest 15-min slot
-          const slotIndex = Math.floor(totalMins / 15);
-          slider.value = Math.min(slotIndex, 95);
-    }
-  // ── Timeline sync ──────────────────────────────────────────────────────────
+
+  function snapToCurrentTime() {
+    const now = new Date();
+    const totalMins = now.getHours() * 60 + now.getMinutes();
+    const slotIndex = Math.floor(totalMins / 15);
+    slider.value = Math.min(slotIndex, 95);
+  }
+
   function syncUI() {
     const idx  = parseInt(slider.value);
     const pct  = idx / 95;
@@ -701,18 +803,6 @@
     if (layer) layer.setOpacity(parseFloat(opSlider.value));
   });
 
-  // ── Colorbar visibility ────────────────────────────────────────────────────
-  function showColorbar() {
-    const cb = document.getElementById("colorbar");
-    cb.style.display = window.innerWidth <= 480 ? "flex" : "block";
-    cb.classList.add("show");
-  }
-  function hideColorbar() {
-    document.getElementById("colorbar").style.display = "none";
-    document.getElementById("colorbar").classList.remove("show");
-  }
-
-  // ── Clear overlay ──────────────────────────────────────────────────────────
   function clearOverlay() {
     if (layer)       { map.removeLayer(layer); layer = null; }
     if (clickMarker) { clickMarker.remove();   clickMarker = null; }
@@ -725,7 +815,6 @@
   }
   document.getElementById("clearBtn").addEventListener("click", clearOverlay);
 
-  // ── Step buttons ───────────────────────────────────────────────────────────
   document.getElementById("btnPrev").addEventListener("click", () => {
     let v = parseInt(slider.value);
     if (v > 0)  { slider.value = v - 1; syncUI(); triggerLoad(); }
@@ -739,7 +828,6 @@
     debounce = setTimeout(load, 280);
   }
 
-  // ── Load XYZ tile layer ────────────────────────────────────────────────────
   async function load() {
     const idx  = parseInt(slider.value);
     const time = steps[idx];
@@ -796,7 +884,6 @@
     layer.addTo(map);
   }
 
-  // ── Click pin icon ─────────────────────────────────────────────────────────
   function makePinIcon() {
     return L.divIcon({
       className: "", iconAnchor: [10,10], popupAnchor: [0,-16],
@@ -811,7 +898,6 @@
     });
   }
 
-  // ── Map click → /rainfall/value ────────────────────────────────────────────
   map.on("click", async function(e) {
     const { lat, lng } = e.latlng;
     const idx  = parseInt(slider.value);
@@ -895,8 +981,8 @@
   // ── Boot ───────────────────────────────────────────────────────────────────
   slider.addEventListener("input", () => { syncUI(); triggerLoad(); });
   document.getElementById("dateInput").addEventListener("change", load);
-  
-  snapToCurrentTime(); 
+
+  snapToCurrentTime();
   syncUI();
   load();
 </script>
