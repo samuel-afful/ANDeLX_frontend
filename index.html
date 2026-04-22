@@ -669,7 +669,13 @@
   }
   buildTicks();
   window.addEventListener("resize", buildTicks);
-
+      function snapToCurrentTime() {
+          const now = new Date();
+          const totalMins = now.getHours() * 60 + now.getMinutes();
+          // Round down to nearest 15-min slot
+          const slotIndex = Math.floor(totalMins / 15);
+          slider.value = Math.min(slotIndex, 95);
+    }
   // ── Timeline sync ──────────────────────────────────────────────────────────
   function syncUI() {
     const idx  = parseInt(slider.value);
@@ -889,7 +895,8 @@
   // ── Boot ───────────────────────────────────────────────────────────────────
   slider.addEventListener("input", () => { syncUI(); triggerLoad(); });
   document.getElementById("dateInput").addEventListener("change", load);
-
+  
+  snapToCurrentTime(); 
   syncUI();
   load();
 </script>
